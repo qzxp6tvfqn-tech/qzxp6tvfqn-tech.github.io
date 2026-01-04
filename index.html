@@ -830,13 +830,6 @@
             display: block;
         }
 
-        .loading-indicator {
-            text-align: center;
-            font-size: 12px;
-            color: var(--secondary);
-            margin: 10px 0;
-        }
-
         /* ========== RESPONSIVE ========== */
         @media (max-width: 480px) {
             .game-title {
@@ -874,7 +867,7 @@
             <div class="library-list" id="libraryList"></div>
 
             <div class="library-summary" id="librarySummary">
-                Summe ausgewählter Wörter: <strong id="totalWords">0</strong>
+                Wörter nach Duplikat-Entfernung: <strong id="deduplicatedWords">0</strong> / <strong id="totalWords">0</strong>
             </div>
 
             <div class="file-input-wrapper">
@@ -884,10 +877,6 @@
             </div>
 
             <div class="error-message" id="errorLibrary"></div>
-
-            <div class="loading-indicator" id="loadingIndicator">
-                📡 Lädt Listen aus GitHub...
-            </div>
 
             <div class="library-actions">
                 <button class="btn btn-primary" id="btnLibraryStart">Weiter zur Startseite</button>
@@ -1036,10 +1025,11 @@
             timerInterval: null,
             timeRemaining: 0,
             scores: { 0: {}, 1: {} },
-            roundData: { 0: {}, 1: {} },
+            roundData: { 0: {}, 1: {} }, // { teamId: { roundNumber: { correct: X, processed: Y } } }
             usedCardIndices: new Set(),
             roundCardIndices: [],
-            roundStartIndex: 0
+            roundStartIndex: 0,
+            excludedIndices: new Set() // Dauerhaft ausgeschlossene Duplikate
         };
 
         // ===== VORDEFINIERTE LISTEN (FALLBACK) =====
@@ -1069,6 +1059,7 @@
             }
         ];
         let uploadedFilesLibrary = [];
+        let allCardsBeforeDeduplicate = 0; // Tracking für Statistik
 
         // DOM Elements
         const elements = {
@@ -1115,17 +1106,18 @@
             btnContinueRemaining: document.getElementById('btnContinueRemaining'),
             btnContinueNew: document.getElementById('btnContinueNew'),
             errorLibrary: document.getElementById('errorLibrary'),
-            loadingIndicator: document.getElementById('loadingIndicator')
+            deduplicatedWords: document.getElementById('deduplicatedWords'),
+            totalWords: document.getElementById('totalWords')
         };
 
-        // Load library at startup
+        // ===== GITHUB LOADER =====
         async function loadLibrary() {
-            try {
-                await loadFromGitHub();
-            } catch (error) {
-                console.log('GitHub-Laden fehlgeschlagen, verwende Fallback-Listen:', error.message);
+            await loadFromGitHub();
+            
+            if (libraryCards.length === 0) {
+                console.log('GitHub-Dateien nicht verfügbar, verwende vordefinierte Listen');
             }
-
+            
             // Lade CSV-Inhalte für GitHub-Dateien
             for (const lib of libraryCards) {
                 if (lib.csvUrl && lib.cards.length === 0) {
@@ -1133,57 +1125,51 @@
                         const csvResp = await fetch(lib.csvUrl);
                         const csvText = await csvResp.text();
                         lib.cards = parseLibraryCSV(csvText);
-                        lib.cardCount = lib.cards.length;
                     } catch (error) {
                         console.warn(`Fehler beim Laden von ${lib.fileName}:`, error);
                     }
                 }
             }
-
-            elements.loadingIndicator.style.display = 'none';
+            
             renderLibrary();
         }
 
-        // Lade CSV-Dateien aus GitHub
         async function loadFromGitHub() {
-            const owner = "qzxp6tvfqn-tech";
-            const repo = "qzxp6tvfqn-tech.github.io";
-            const path = "lists";
-
-            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-
-            const response = await fetch(apiUrl);
-
-            if (!response.ok) throw new Error('GitHub API Fehler: ' + response.status);
-
-            const files = await response.json();
-
-            // Leere zunächst die Fallback-Listen (falls vorhanden)
-            libraryCards = [];
-
-            // Filtere nur CSV-Dateien
-            for (const file of files) {
-                if (file.name.endsWith('.csv')) {
-                    const parts = file.name.replace('.csv', '').split('_');
-                    if (parts.length >= 3) {
-                        const difficulty = parts[0];
-                        const theme = parts.slice(1, -1).join('_');
-
-                        const rawUrl = file.download_url;
-
-                        libraryCards.push({
-                            fileName: file.name,
-                            difficulty,
-                            theme,
-                            cardCount: 0,
-                            csvUrl: rawUrl,
-                            cards: []
-                        });
+            try {
+                const owner = "qzxp6tvfqn-tech";
+                const repo = "qzxp6tvfqn-tech.github.io";
+                const path = "lists";
+                
+                const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) throw new Error('GitHub API Fehler');
+                
+                const files = await response.json();
+                libraryCards = []; // Leere vordefinierte Listen
+                
+                for (const file of files) {
+                    if (file.name.endsWith('.csv')) {
+                        const parts = file.name.replace('.csv', '').split('_');
+                        if (parts.length >= 3) {
+                            const difficulty = parts[0];
+                            const theme = parts.slice(1, -1).join('_');
+                            const rawUrl = file.download_url;
+                            
+                            libraryCards.push({
+                                fileName: file.name,
+                                difficulty,
+                                theme,
+                                cardCount: 0,
+                                csvUrl: rawUrl,
+                                cards: []
+                            });
+                        }
                     }
                 }
+            } catch (error) {
+                console.log('GitHub-Laden fehlgeschlagen, verwende Fallback-Listen:', error.message);
             }
-
-            console.log(`✓ ${libraryCards.length} Listen aus GitHub geladen`);
         }
 
         function renderLibrary() {
@@ -1212,12 +1198,41 @@
 
         function updateLibrarySummary() {
             let totalCards = 0;
+            let allCards = [];
+            
+            // Sammle alle Karten von ausgewählten Listen
             document.querySelectorAll('.library-item.selected').forEach(item => {
                 const idx = parseInt(item.dataset.index);
-                totalCards += libraryCards[idx].cardCount;
+                allCards.push(...libraryCards[idx].cards);
+                totalCards += libraryCards[idx].cards.length;
             });
-            totalCards += uploadedFilesLibrary.reduce((sum, file) => sum + (file.cardCount || 0), 0);
-            document.getElementById('totalWords').textContent = totalCards;
+            
+            // Füge hochgeladene Dateien hinzu
+            uploadedFilesLibrary.forEach(file => {
+                allCards.push(...file.cards);
+                totalCards += file.cards.length;
+            });
+
+            allCardsBeforeDeduplicate = totalCards;
+            
+            // Dedupliziere für Anzeige
+            const deduped = deduplicateCardsForDisplay(allCards);
+            
+            elements.deduplicatedWords.textContent = deduped.length;
+            elements.totalWords.textContent = totalCards;
+        }
+
+        function deduplicateCardsForDisplay(cards) {
+            const mainWords = new Set();
+            const deduped = [];
+            for (const card of cards) {
+                const key = card.word.toLowerCase().trim();
+                if (!mainWords.has(key)) {
+                    mainWords.add(key);
+                    deduped.push(card);
+                }
+            }
+            return deduped;
         }
 
         // Library CSV Upload
@@ -1285,28 +1300,36 @@
         async function deduplicateCards(cards) {
             const mainWords = new Set();
             const deduped = [];
-            for (const card of cards) {
+            const dupedIndices = [];
+            
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
                 const key = card.word.toLowerCase().trim();
                 if (!mainWords.has(key)) {
                     mainWords.add(key);
                     deduped.push(card);
+                } else {
+                    dupedIndices.push(i);
                 }
             }
+            
+            // Merke ausgeschlossene Indizes dauerhaft
+            dupedIndices.forEach(idx => gameState.excludedIndices.add(idx));
+            
             return deduped;
         }
 
         elements.btnLibraryStart.addEventListener('click', async () => {
             let allCards = [];
 
-            // Selected library items
             const selectedItems = document.querySelectorAll('.library-item.selected');
             for (const item of selectedItems) {
                 const idx = parseInt(item.dataset.index);
-                const cards = libraryCards[idx].cards;
+                const csv = await fetch(libraryCards[idx].csvUrl).then(r => r.text());
+                const cards = parseLibraryCSV(csv);
                 allCards.push(...cards);
             }
 
-            // Uploaded files
             for (const file of uploadedFilesLibrary) {
                 allCards.push(...file.cards);
             }
@@ -1469,9 +1492,27 @@
             if (gameState.timerInterval) clearInterval(gameState.timerInterval);
             document.getElementById('cardTimerDisplay').style.display = 'none';
 
-            const cardsInRound = gameState.currentCardIndex - gameState.roundStartIndex + 1;
-            gameState.roundData[gameState.currentTeam][gameState.round] = cardsInRound;
+            const cardsProcessed = gameState.currentCardIndex - gameState.roundStartIndex + 1;
+            
+            // Zähle richtige Karten für dieses Team in dieser Runde
+            let correctCount = 0;
+            for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
+                const cardIndex = gameState.roundCardIndices[i];
+                if (gameState.scores[gameState.currentTeam][cardIndex] === 1) {
+                    correctCount++;
+                }
+            }
 
+            // Speichere Rundendaten
+            if (!gameState.roundData[gameState.currentTeam][gameState.round]) {
+                gameState.roundData[gameState.currentTeam][gameState.round] = {};
+            }
+            gameState.roundData[gameState.currentTeam][gameState.round] = {
+                correct: correctCount,
+                processed: cardsProcessed
+            };
+
+            // Markiere Karten als verwendet
             for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
                 gameState.usedCardIndices.add(gameState.roundCardIndices[i]);
             }
@@ -1498,6 +1539,11 @@
                 wordItem.className = 'word-item';
                 wordItem.textContent = card.word;
                 wordItem.dataset.cardIndex = cardIndex;
+                
+                if (gameState.scores[gameState.currentTeam][cardIndex] === 1) {
+                    wordItem.classList.add('selected');
+                }
+                
                 wordItem.addEventListener('click', function() {
                     this.classList.toggle('selected');
                     gameState.scores[gameState.currentTeam][cardIndex] = this.classList.contains('selected') ? 1 : 0;
@@ -1513,13 +1559,20 @@
         }
 
         elements.btnNextRound.addEventListener('click', function() {
+            // Prüfe ob noch Karten verfügbar sind
             if (gameState.roundCardIndices.length === 0 || (gameState.currentCardIndex === gameState.roundCardIndices.length - 1 && gameState.usedCardIndices.size === gameState.cards.length)) {
                 endGame();
                 return;
             }
 
-            gameState.currentTeam = gameState.currentTeam === 0 ? 1 : 0;
-            gameState.round++;
+            // Wechsel zum anderen Team, Rundenzähler erhöht sich nur wenn Team 0 wieder an der Reihe ist
+            if (gameState.currentTeam === 0) {
+                gameState.currentTeam = 1;
+            } else {
+                gameState.currentTeam = 0;
+                gameState.round++;
+            }
+            
             initializeRound();
             showView('viewRS');
         });
@@ -1558,22 +1611,24 @@
                     <tbody>
             `;
 
-            for (let r = 1; r < gameState.round; r++) {
-                const team0Cards = gameState.roundData[0][r] || 0;
-                const team1Cards = gameState.roundData[1][r] || 0;
-                let team0Score = 0, team1Score = 0;
+            let totalTeam0 = 0;
+            let totalTeam1 = 0;
 
-                const allRoundScores = Object.values(gameState.scores[0]).concat(Object.values(gameState.scores[1]));
-                if (allRoundScores.length > 0) {
-                    team0Score = Math.floor(team0Total / gameState.round);
-                    team1Score = Math.floor(team1Total / gameState.round);
-                }
+            for (let r = 1; r <= gameState.round; r++) {
+                const team0Data = gameState.roundData[0][r] || { correct: 0, processed: 0 };
+                const team1Data = gameState.roundData[1][r] || { correct: 0, processed: 0 };
+                
+                totalTeam0 += team0Data.correct;
+                totalTeam1 += team1Data.correct;
+
+                const team0Score = `${team0Data.correct}/${team0Data.processed}`;
+                const team1Score = `${team1Data.correct}/${team1Data.processed}`;
 
                 tableHTML += `
                     <tr>
                         <td>Runde ${r}</td>
-                        <td class="team-score">${team0Score}/${team0Cards}</td>
-                        <td class="team-score">${team1Score}/${team1Cards}</td>
+                        <td class="team-score">${team0Score}</td>
+                        <td class="team-score">${team1Score}</td>
                     </tr>
                 `;
             }
@@ -1581,8 +1636,8 @@
             tableHTML += `
                     <tr class="round-total">
                         <td>GESAMT</td>
-                        <td>${team0Total}/${gameState.roundCardIndices.length}</td>
-                        <td>${team1Total}/${gameState.roundCardIndices.length}</td>
+                        <td>${totalTeam0}</td>
+                        <td>${totalTeam1}</td>
                     </tr>
                     </tbody>
                 </table>
@@ -1590,58 +1645,61 @@
 
             elements.resultsContainer.innerHTML = tableHTML;
 
-            let winner = team0Total > team1Total ? gameState.teams[0] : team1Total > team0Total ? gameState.teams[1] : 'Unentschieden!';
+            let winner = totalTeam0 > totalTeam1 ? gameState.teams[0] : totalTeam1 > totalTeam0 ? gameState.teams[1] : 'Unentschieden!';
             elements.resultsContainer.innerHTML += `<div class="winner-announcement">🏆 ${winner} hat gewonnen! 🏆</div>`;
         }
 
         elements.btnNewGame.addEventListener('click', () => {
-            if (gameState.usedCardIndices.size >= gameState.cards.length) {
-                elements.btnContinueRemaining.disabled = true;
-                elements.btnContinueRemaining.style.opacity = '0.5';
+            // Prüfe ob noch Karten verfügbar sind
+            const remainingCards = gameState.cards.length - gameState.usedCardIndices.size;
+            
+            if (remainingCards <= 0) {
+                // Keine Karten mehr, kann nur mit allen Karten neu starten
+                startNewGame(true);
             } else {
+                // Es gibt noch Karten, zeige Modal
                 elements.btnContinueRemaining.disabled = false;
                 elements.btnContinueRemaining.style.opacity = '1';
+                elements.continueGameModal.classList.add('show');
             }
-            elements.continueGameModal.classList.add('show');
         });
 
-        elements.btnContinueRemaining.addEventListener('click', () => {
-            if (this.disabled) return;
+        function startNewGame(resetAll) {
             elements.continueGameModal.classList.remove('show');
             gameState.round = 1;
             gameState.currentTeam = 0;
             gameState.roundData = { 0: {}, 1: {} };
+            
+            if (resetAll) {
+                // Mit allen Karten neu starten - aber Duplikate bleiben ausgeschlossen
+                gameState.usedCardIndices = new Set();
+            }
+            // Mit verbleibenden Karten - usedCardIndices bleibt wie ist
+            
             for (let team of [0, 1]) {
                 gameState.scores[team] = {};
                 for (let i = 0; i < gameState.cards.length; i++) {
                     gameState.scores[team][i] = 0;
                 }
             }
+            
             initializeRound();
             showView('viewRS');
+        }
+
+        elements.btnContinueRemaining.addEventListener('click', () => {
+            startNewGame(false);
         });
 
         elements.btnContinueNew.addEventListener('click', () => {
-            elements.continueGameModal.classList.remove('show');
-            gameState.usedCardIndices = new Set();
-            gameState.round = 1;
-            gameState.currentTeam = 0;
-            gameState.roundData = { 0: {}, 1: {} };
-            for (let team of [0, 1]) {
-                gameState.scores[team] = {};
-                for (let i = 0; i < gameState.cards.length; i++) {
-                    gameState.scores[team][i] = 0;
-                }
-            }
-            initializeRound();
-            showView('viewRS');
+            startNewGame(true);
         });
 
         elements.btnHome.addEventListener('click', () => {
             libraryCards = [];
             uploadedFilesLibrary = [];
             gameState.cards = [];
-            elements.loadingIndicator.style.display = 'block';
+            gameState.excludedIndices = new Set();
             loadLibrary();
             showView('viewLibrary');
         });
