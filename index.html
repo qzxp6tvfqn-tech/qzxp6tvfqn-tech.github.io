@@ -830,6 +830,13 @@
             display: block;
         }
 
+        .loading-indicator {
+            text-align: center;
+            font-size: 12px;
+            color: var(--secondary);
+            margin: 10px 0;
+        }
+
         /* ========== RESPONSIVE ========== */
         @media (max-width: 480px) {
             .game-title {
@@ -877,6 +884,10 @@
             </div>
 
             <div class="error-message" id="errorLibrary"></div>
+
+            <div class="loading-indicator" id="loadingIndicator">
+                📡 Lädt Listen aus GitHub...
+            </div>
 
             <div class="library-actions">
                 <button class="btn btn-primary" id="btnLibraryStart">Weiter zur Startseite</button>
@@ -1031,7 +1042,32 @@
             roundStartIndex: 0
         };
 
-        let libraryCards = [];
+        // ===== VORDEFINIERTE LISTEN (FALLBACK) =====
+        let libraryCards = [
+            {
+                fileName: "Leicht_Tiere_3.csv",
+                difficulty: "Leicht",
+                theme: "Tiere",
+                cardCount: 3,
+                csvUrl: null,
+                cards: [
+                    { word: "Katze", forbidden: ["Tier", "Haustier", "Säugetier", "Pfote"] },
+                    { word: "Hund", forbidden: ["Tier", "Haustier", "Bellt", "Laufen"] },
+                    { word: "Vogel", forbidden: ["Tier", "Fliegt", "Federn", "Nest"] }
+                ]
+            },
+            {
+                fileName: "Mittel_Geographie_2.csv",
+                difficulty: "Mittel",
+                theme: "Geographie",
+                cardCount: 2,
+                csvUrl: null,
+                cards: [
+                    { word: "Berlin", forbidden: ["Stadt", "Deutschland", "Hauptstadt", "Mauer"] },
+                    { word: "Alpen", forbidden: ["Berg", "Europa", "Ski", "Schnee"] }
+                ]
+            }
+        ];
         let uploadedFilesLibrary = [];
 
         // DOM Elements
@@ -1078,45 +1114,76 @@
             continueGameModal: document.getElementById('continueGameModal'),
             btnContinueRemaining: document.getElementById('btnContinueRemaining'),
             btnContinueNew: document.getElementById('btnContinueNew'),
-            errorLibrary: document.getElementById('errorLibrary')
+            errorLibrary: document.getElementById('errorLibrary'),
+            loadingIndicator: document.getElementById('loadingIndicator')
         };
 
         // Load library at startup
         async function loadLibrary() {
             try {
-                const response = await fetch('lists/');
-                if (!response.ok) throw new Error('Bibliothek nicht gefunden');
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const links = Array.from(doc.querySelectorAll('a')).map(a => a.href);
-                const csvFiles = links.filter(l => l.endsWith('.csv'));
+                await loadFromGitHub();
+            } catch (error) {
+                console.log('GitHub-Laden fehlgeschlagen, verwende Fallback-Listen:', error.message);
+            }
 
-                for (const csvUrl of csvFiles) {
-                    const fileName = csvUrl.split('/').pop();
-                    const parts = fileName.replace('.csv', '').split('_');
+            // Lade CSV-Inhalte für GitHub-Dateien
+            for (const lib of libraryCards) {
+                if (lib.csvUrl && lib.cards.length === 0) {
+                    try {
+                        const csvResp = await fetch(lib.csvUrl);
+                        const csvText = await csvResp.text();
+                        lib.cards = parseLibraryCSV(csvText);
+                        lib.cardCount = lib.cards.length;
+                    } catch (error) {
+                        console.warn(`Fehler beim Laden von ${lib.fileName}:`, error);
+                    }
+                }
+            }
+
+            elements.loadingIndicator.style.display = 'none';
+            renderLibrary();
+        }
+
+        // Lade CSV-Dateien aus GitHub
+        async function loadFromGitHub() {
+            const owner = "qzxp6tvfqn-tech";
+            const repo = "qzxp6tvfqn-tech.github.io";
+            const path = "lists";
+
+            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+            const response = await fetch(apiUrl);
+
+            if (!response.ok) throw new Error('GitHub API Fehler: ' + response.status);
+
+            const files = await response.json();
+
+            // Leere zunächst die Fallback-Listen (falls vorhanden)
+            libraryCards = [];
+
+            // Filtere nur CSV-Dateien
+            for (const file of files) {
+                if (file.name.endsWith('.csv')) {
+                    const parts = file.name.replace('.csv', '').split('_');
                     if (parts.length >= 3) {
                         const difficulty = parts[0];
                         const theme = parts.slice(1, -1).join('_');
-                        const csvResp = await fetch(csvUrl);
-                        const csvText = await csvResp.text();
-                        const cardCount = csvText.trim().split('\n').length;
+
+                        const rawUrl = file.download_url;
 
                         libraryCards.push({
-                            fileName,
+                            fileName: file.name,
                             difficulty,
                             theme,
-                            cardCount,
-                            csvUrl,
+                            cardCount: 0,
+                            csvUrl: rawUrl,
                             cards: []
                         });
                     }
                 }
-
-                renderLibrary();
-            } catch (error) {
-                console.log('Bibliothek nicht verfügbar, nur manueller Upload möglich');
             }
+
+            console.log(`✓ ${libraryCards.length} Listen aus GitHub geladen`);
         }
 
         function renderLibrary() {
@@ -1235,8 +1302,7 @@
             const selectedItems = document.querySelectorAll('.library-item.selected');
             for (const item of selectedItems) {
                 const idx = parseInt(item.dataset.index);
-                const csv = await fetch(libraryCards[idx].csvUrl).then(r => r.text());
-                const cards = parseLibraryCSV(csv);
+                const cards = libraryCards[idx].cards;
                 allCards.push(...cards);
             }
 
@@ -1497,7 +1563,6 @@
                 const team1Cards = gameState.roundData[1][r] || 0;
                 let team0Score = 0, team1Score = 0;
 
-                // Simplified: distribute points proportionally
                 const allRoundScores = Object.values(gameState.scores[0]).concat(Object.values(gameState.scores[1]));
                 if (allRoundScores.length > 0) {
                     team0Score = Math.floor(team0Total / gameState.round);
@@ -1576,6 +1641,7 @@
             libraryCards = [];
             uploadedFilesLibrary = [];
             gameState.cards = [];
+            elements.loadingIndicator.style.display = 'block';
             loadLibrary();
             showView('viewLibrary');
         });
