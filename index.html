@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabu Individual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #FF6B6B;
+            --primary-dark: #E63946;
+            --primary-light: #FF8E8E;
+            --secondary: #1D3557;
+            --accent: #F1FAEE;
+            --success: #2A9D8F;
+            --warning: #E8B44A;
+            --text: #1D3557;
+            --border: #DDD;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--secondary) 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            height: 100vh;
+            max-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--accent);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .view {
+            display: none;
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .view.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ========== BIBLIOTHEKS-SEITE ========== */
+        .view-library {
+            justify-content: flex-start;
+        }
+
+        .library-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .library-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .library-subtitle {
+            font-size: 14px;
+            color: var(--secondary);
+        }
+
+        .library-list {
+            flex: 1;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .library-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .library-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .library-item.selected {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(229, 57, 70, 0.1));
+            border-color: var(--primary);
+        }
+
+        .library-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .library-item.selected .library-checkbox {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            font-size: 16px;
+        }
+
+        .library-item-info {
+            flex: 1;
+        }
+
+        .library-item-title {
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .library-item-meta {
+            font-size: 12px;
+            color: var(--secondary);
+            display: flex;
+            gap: 15px;
+        }
+
+        .library-summary {
+            background: #F0F0F0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .library-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* ========== STARTSEITE ========== */
+        .view-start {
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+        }
+
+        .start-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .game-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--primary);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .game-subtitle {
+            font-size: 18px;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin: 15px 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--secondary);
+            font-size: 14px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-dark);
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin: 15px 0;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .file-input-label:active {
+            transform: scale(0.98);
+        }
+
+        .file-name {
+            font-size: 12px;
+            color: var(--success);
+            margin-top: 5px;
+        }
+
+        .file-list {
+            font-size: 12px;
+            color: var(--secondary);
+            margin-top: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            background: #F0F0F0;
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .file-item-name {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .file-item-remove {
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: bold;
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+
+        .timer-settings {
+            background: #F0F0F0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .timer-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 28px;
+            background: #CCC;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--success);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: left 0.3s ease;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            left: 24px;
+        }
+
+        .timer-input-wrapper {
+            display: none;
+        }
+
+        .timer-input-wrapper.show {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .timer-input-wrapper input {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid var(--primary);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 10px 16px;
+            font-size: 14px;
+        }
+
+        /* ========== RUNDENSTART (RS) ========== */
+        .view-rs {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .rs-content {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            width: 100%;
+        }
+
+        .team-indicator {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--primary);
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(229, 57, 70, 0.1));
+            border-radius: 12px;
+            border: 3px solid var(--primary);
+        }
+
+        .round-info {
+            font-size: 18px;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .timer-display {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            padding: 20px;
+            background: #FFF3F3;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .timer-display.show {
+            display: block;
+        }
+
+        /* ========== KARTENANSICHT (KA) ========== */
+        .view-ka {
+            justify-content: space-between;
+        }
+
+        .ka-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .ka-team-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .ka-counter {
+            font-size: 14px;
+            color: var(--secondary);
+            background: #F0F0F0;
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .card-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 20px 0;
+            touch-action: pan-y;
+        }
+
+        .card-timer-display {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            padding: 12px 20px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1 / 1.4;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            color: white;
+            text-align: center;
+            position: relative;
+            user-select: none;
+            cursor: grab;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            animation: slideInRight 0.5s ease;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .card.slide-out-left {
+            animation: slideOutLeft 0.4s ease forwards;
+        }
+
+        @keyframes slideOutLeft {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-100%);
+            }
+        }
+
+        .card:active {
+            cursor: grabbing;
+        }
+
+        .card-word {
+            font-size: 44px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            word-wrap: break-word;
+        }
+
+        .card-forbidden {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .card-forbidden-title {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .ka-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-end {
+            width: 100%;
+            order: -1;
+        }
+
+        .btn-next {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .swipe-hint {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        /* ========== RUNDENAUSWERTUNG (RA) ========== */
+        .view-ra {
+            justify-content: flex-start;
+        }
+
+        .ra-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .ra-team {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .ra-round {
+            font-size: 14px;
+            color: var(--secondary);
+            margin-top: 5px;
+        }
+
+        .ra-score {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--success);
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(42, 157, 143, 0.1);
+            border-radius: 6px;
+        }
+
+        .word-list {
+            flex: 1;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .word-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .word-item.selected {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .ra-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-next-round {
+            flex: 1;
+        }
+
+        .btn-end-game {
+            background: var(--warning);
+            color: white;
+        }
+
+        /* ========== SPIELAUSWERTUNG (SA) ========== */
+        .view-sa {
+            justify-content: space-between;
+        }
+
+        .sa-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .sa-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .results-container {
+            flex: 1;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .results-table th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .results-table th:first-child {
+            text-align: left;
+        }
+
+        .results-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .results-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .results-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .results-table .round-total {
+            background: #F0F0F0;
+            font-weight: 700;
+            border-top: 2px solid var(--border);
+        }
+
+        .results-table .team-score {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .winner-announcement {
+            background: linear-gradient(135deg, var(--success) 0%, #1f8d7a 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .sa-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-new-game {
+            flex: 1;
+        }
+
+        .btn-home {
+            flex: 1;
+            background: var(--secondary);
+            color: white;
+        }
+
+        /* ========== MODAL ========== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--accent);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 15px;
+        }
+
+        .modal-text {
+            color: var(--text);
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-buttons .btn {
+            flex: 1;
+        }
+
+        .continue-game-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .continue-game-options .btn {
+            width: 100%;
+        }
+
+        /* ========== ERROR MESSAGE ========== */
+        .error-message {
+            background: #FFE0E0;
+            color: var(--primary-dark);
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 480px) {
+            .game-title {
+                font-size: 36px;
+            }
+
+            .card-word {
+                font-size: 36px;
+            }
+
+            .card {
+                padding: 30px 20px;
+            }
+
+            .results-table {
+                font-size: 11px;
+            }
+
+            .results-table th,
+            .results-table td {
+                padding: 8px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- BIBLIOTHEKS-SEITE -->
+        <div class="view view-library active" id="viewLibrary">
+            <div class="library-header">
+                <h2 class="library-title">📚 Themen-Bibliothek</h2>
+                <p class="library-subtitle">Wähle deine Themen aus</p>
+            </div>
+
+            <div class="library-list" id="libraryList"></div>
+
+            <div class="library-summary" id="librarySummary">
+                Summe ausgewählter Wörter: <strong id="totalWords">0</strong>
+            </div>
+
+            <div class="file-input-wrapper">
+                <label for="csvFileLibrary" class="file-input-label">+ Weitere CSV Datei(en)</label>
+                <input type="file" id="csvFileLibrary" accept=".csv" multiple />
+                <div class="file-list" id="fileListLibrary"></div>
+            </div>
+
+            <div class="error-message" id="errorLibrary"></div>
+
+            <div class="library-actions">
+                <button class="btn btn-primary" id="btnLibraryStart">Weiter zur Startseite</button>
+            </div>
+        </div>
+
+        <!-- STARTSEITE -->
+        <div class="view view-start" id="viewStart">
+            <div class="start-content">
+                <div>
+                    <h1 class="game-title">Tabu</h1>
+                    <p class="game-subtitle">Individual</p>
+                </div>
+
+                <div>
+                    <div class="form-group">
+                        <label for="team1">Team 1 Name</label>
+                        <input type="text" id="team1" placeholder="z.B. Team A" value="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="team2">Team 2 Name</label>
+                        <input type="text" id="team2" placeholder="z.B. Team B" value="">
+                    </div>
+
+                    <div class="timer-settings">
+                        <div class="timer-toggle">
+                            <span>Timer aktivieren:</span>
+                            <div class="toggle-switch" id="timerToggle">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="timer-input-wrapper" id="timerInputWrapper">
+                            <input type="number" id="timerSeconds" min="10" max="300" value="60" />
+                            <span>Sekunden</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="btnStart">Spiel Starten</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RUNDENSTART (RS) -->
+        <div class="view view-rs" id="viewRS">
+            <div class="rs-content">
+                <div class="team-indicator" id="rsTeamName">Team 1</div>
+                <div class="round-info" id="rsRoundInfo">Runde 1</div>
+                <div class="timer-display" id="timerDisplayRS">60 Sekunden</div>
+                <button class="btn btn-primary btn-large" id="btnStartRound">Runde Starten</button>
+            </div>
+        </div>
+
+        <!-- KARTENANSICHT (KA) -->
+        <div class="view view-ka" id="viewKA">
+            <div class="ka-header">
+                <div class="ka-team-name" id="kaTeamName">Team 1</div>
+                <div class="ka-counter" id="kaCounter">1 / 30</div>
+            </div>
+
+            <div class="card-container" id="cardContainer">
+                <div id="cardTimerDisplay" class="card-timer-display" style="display:none;"></div>
+                <div class="card" id="card">
+                    <div class="card-word" id="cardWord">Wort</div>
+                    <div class="card-forbidden" id="cardForbidden">
+                        <div class="card-forbidden-title">VERBOTEN:</div>
+                        <div id="forbiddenList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="swipe-hint">← Wischen zum Blättern →</div>
+
+            <div class="ka-controls">
+                <button class="btn btn-end" id="btnEndRound">Runde Beenden</button>
+                <button class="btn btn-secondary btn-next" id="btnPrev">← Zurück</button>
+                <button class="btn btn-primary btn-next" id="btnNext">Weiter →</button>
+            </div>
+        </div>
+
+        <!-- RUNDENAUSWERTUNG (RA) -->
+        <div class="view view-ra" id="viewRA">
+            <div class="ra-header">
+                <div class="ra-team" id="raTeamName">Team 1</div>
+                <div class="ra-round" id="raRoundInfo">Runde 1</div>
+                <div class="ra-score" id="raScore">Gesamtpunkte: 0</div>
+            </div>
+
+            <div class="word-list" id="wordList"></div>
+
+            <div class="ra-actions">
+                <button class="btn btn-primary btn-next-round" id="btnNextRound">Nächste Runde Starten</button>
+                <button class="btn btn-end-game" id="btnGameEnd">Spiel Beenden</button>
+            </div>
+        </div>
+
+        <!-- SPIELAUSWERTUNG (SA) -->
+        <div class="view view-sa" id="viewSA">
+            <div class="sa-header">
+                <h2 class="sa-title">Spielergebnis</h2>
+            </div>
+
+            <div class="results-container" id="resultsContainer"></div>
+
+            <div class="sa-actions">
+                <button class="btn btn-primary btn-new-game" id="btnNewGame">Neues Spiel</button>
+                <button class="btn btn-home" id="btnHome">Zur Bibliothek</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal" id="confirmGameEnd">
+        <div class="modal-content">
+            <div class="modal-title">Spiel beenden?</div>
+            <div class="modal-text">Bist du sicher, dass du das Spiel beenden möchtest?</div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="btnCancelEnd">Abbrechen</button>
+                <button class="btn btn-primary" id="btnConfirmEnd">Beenden</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="continueGameModal">
+        <div class="modal-content">
+            <div class="modal-title">Weiterspielen?</div>
+            <div class="modal-text">Möchtest du mit den verbleibenden Karten weiterspielen oder mit allen Karten neu beginnen?</div>
+            <div class="continue-game-options">
+                <button class="btn btn-primary" id="btnContinueRemaining">Mit verbleibenden Karten</button>
+                <button class="btn btn-secondary" id="btnContinueNew">Mit allen Karten neu starten</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        const gameState = {
+            cards: [],
+            currentRoundCards: [],
+            currentCardIndex: 0,
+            teams: ['Team 1', 'Team 2'],
+            currentTeam: 0,
+            round: 1,
+            useTimer: false,
+            timerSeconds: 60,
+            timerInterval: null,
+            timeRemaining: 0,
+            scores: { 0: {}, 1: {} },
+            roundData: { 0: {}, 1: {} },
+            usedCardIndices: new Set(),
+            roundCardIndices: [],
+            roundStartIndex: 0
+        };
+
+        let libraryCards = [];
+        let uploadedFilesLibrary = [];
+
+        // DOM Elements
+        const elements = {
+            viewLibrary: document.getElementById('viewLibrary'),
+            viewStart: document.getElementById('viewStart'),
+            viewRS: document.getElementById('viewRS'),
+            viewKA: document.getElementById('viewKA'),
+            viewRA: document.getElementById('viewRA'),
+            viewSA: document.getElementById('viewSA'),
+            libraryList: document.getElementById('libraryList'),
+            btnLibraryStart: document.getElementById('btnLibraryStart'),
+            team1: document.getElementById('team1'),
+            team2: document.getElementById('team2'),
+            csvFileLibrary: document.getElementById('csvFileLibrary'),
+            fileListLibrary: document.getElementById('fileListLibrary'),
+            btnStart: document.getElementById('btnStart'),
+            timerToggle: document.getElementById('timerToggle'),
+            timerInputWrapper: document.getElementById('timerInputWrapper'),
+            timerSeconds: document.getElementById('timerSeconds'),
+            btnStartRound: document.getElementById('btnStartRound'),
+            rsTeamName: document.getElementById('rsTeamName'),
+            rsRoundInfo: document.getElementById('rsRoundInfo'),
+            timerDisplayRS: document.getElementById('timerDisplayRS'),
+            kaTeamName: document.getElementById('kaTeamName'),
+            kaCounter: document.getElementById('kaCounter'),
+            cardContainer: document.getElementById('cardContainer'),
+            cardWord: document.getElementById('cardWord'),
+            forbiddenList: document.getElementById('forbiddenList'),
+            btnNext: document.getElementById('btnNext'),
+            btnPrev: document.getElementById('btnPrev'),
+            btnEndRound: document.getElementById('btnEndRound'),
+            raTeamName: document.getElementById('raTeamName'),
+            raRoundInfo: document.getElementById('raRoundInfo'),
+            wordList: document.getElementById('wordList'),
+            btnNextRound: document.getElementById('btnNextRound'),
+            btnGameEnd: document.getElementById('btnGameEnd'),
+            resultsContainer: document.getElementById('resultsContainer'),
+            btnNewGame: document.getElementById('btnNewGame'),
+            btnHome: document.getElementById('btnHome'),
+            confirmGameEnd: document.getElementById('confirmGameEnd'),
+            btnCancelEnd: document.getElementById('btnCancelEnd'),
+            btnConfirmEnd: document.getElementById('btnConfirmEnd'),
+            continueGameModal: document.getElementById('continueGameModal'),
+            btnContinueRemaining: document.getElementById('btnContinueRemaining'),
+            btnContinueNew: document.getElementById('btnContinueNew'),
+            errorLibrary: document.getElementById('errorLibrary')
+        };
+
+        // Load library at startup
+        async function loadLibrary() {
+            try {
+                const response = await fetch('lists/');
+                if (!response.ok) throw new Error('Bibliothek nicht gefunden');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = Array.from(doc.querySelectorAll('a')).map(a => a.href);
+                const csvFiles = links.filter(l => l.endsWith('.csv'));
+
+                for (const csvUrl of csvFiles) {
+                    const fileName = csvUrl.split('/').pop();
+                    const parts = fileName.replace('.csv', '').split('_');
+                    if (parts.length >= 3) {
+                        const difficulty = parts[0];
+                        const theme = parts.slice(1, -1).join('_');
+                        const csvResp = await fetch(csvUrl);
+                        const csvText = await csvResp.text();
+                        const cardCount = csvText.trim().split('\n').length;
+
+                        libraryCards.push({
+                            fileName,
+                            difficulty,
+                            theme,
+                            cardCount,
+                            csvUrl,
+                            cards: []
+                        });
+                    }
+                }
+
+                renderLibrary();
+            } catch (error) {
+                console.log('Bibliothek nicht verfügbar, nur manueller Upload möglich');
+            }
+        }
+
+        function renderLibrary() {
+            const html = libraryCards.map((lib, idx) => `
+                <div class="library-item" data-index="${idx}">
+                    <div class="library-checkbox">✓</div>
+                    <div class="library-item-info">
+                        <div class="library-item-title">${lib.theme}</div>
+                        <div class="library-item-meta">
+                            <span>🎯 ${lib.difficulty}</span>
+                            <span>📋 ${lib.cardCount} Wörter</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            elements.libraryList.innerHTML = html;
+
+            document.querySelectorAll('.library-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    item.classList.toggle('selected');
+                    updateLibrarySummary();
+                });
+            });
+        }
+
+        function updateLibrarySummary() {
+            let totalCards = 0;
+            document.querySelectorAll('.library-item.selected').forEach(item => {
+                const idx = parseInt(item.dataset.index);
+                totalCards += libraryCards[idx].cardCount;
+            });
+            totalCards += uploadedFilesLibrary.reduce((sum, file) => sum + (file.cardCount || 0), 0);
+            document.getElementById('totalWords').textContent = totalCards;
+        }
+
+        // Library CSV Upload
+        elements.csvFileLibrary.addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const lines = event.target.result.trim().split('\n').filter(l => l.trim());
+                        uploadedFilesLibrary.push({
+                            name: file.name,
+                            cardCount: lines.length,
+                            cards: parseLibraryCSV(event.target.result)
+                        });
+                        updateLibraryFileList();
+                        updateLibrarySummary();
+                    } catch (error) {
+                        showErrorLibrary(`Fehler in ${file.name}: Ungültiges CSV-Format`);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function parseLibraryCSV(csv) {
+            const cards = [];
+            const lines = csv.trim().split('\n');
+            for (let line of lines) {
+                if (line.trim() === '') continue;
+                const parts = line.split(';').map(p => p.trim());
+                if (parts.length === 5) {
+                    cards.push({
+                        word: parts[0],
+                        forbidden: [parts[1], parts[2], parts[3], parts[4]]
+                    });
+                }
+            }
+            return cards;
+        }
+
+        function updateLibraryFileList() {
+            const fileList = elements.fileListLibrary;
+            fileList.innerHTML = uploadedFilesLibrary.map((file, idx) => `
+                <div class="file-item">
+                    <span class="file-item-name">✓ ${file.name} (${file.cardCount})</span>
+                    <span class="file-item-remove" onclick="removeLibraryFile(${idx})">✕</span>
+                </div>
+            `).join('');
+        }
+
+        function removeLibraryFile(idx) {
+            uploadedFilesLibrary.splice(idx, 1);
+            updateLibraryFileList();
+            updateLibrarySummary();
+        }
+
+        function showErrorLibrary(msg) {
+            elements.errorLibrary.textContent = msg;
+            elements.errorLibrary.classList.add('show');
+        }
+
+        async function deduplicateCards(cards) {
+            const mainWords = new Set();
+            const deduped = [];
+            for (const card of cards) {
+                const key = card.word.toLowerCase().trim();
+                if (!mainWords.has(key)) {
+                    mainWords.add(key);
+                    deduped.push(card);
+                }
+            }
+            return deduped;
+        }
+
+        elements.btnLibraryStart.addEventListener('click', async () => {
+            let allCards = [];
+
+            // Selected library items
+            const selectedItems = document.querySelectorAll('.library-item.selected');
+            for (const item of selectedItems) {
+                const idx = parseInt(item.dataset.index);
+                const csv = await fetch(libraryCards[idx].csvUrl).then(r => r.text());
+                const cards = parseLibraryCSV(csv);
+                allCards.push(...cards);
+            }
+
+            // Uploaded files
+            for (const file of uploadedFilesLibrary) {
+                allCards.push(...file.cards);
+            }
+
+            gameState.cards = await deduplicateCards(allCards);
+
+            if (gameState.cards.length === 0) {
+                showErrorLibrary('Bitte wähle mindestens eine Liste aus oder lade eine CSV-Datei');
+                return;
+            }
+
+            showView('viewStart');
+        });
+
+        // Timer Toggle
+        elements.timerToggle.addEventListener('click', function() {
+            gameState.useTimer = !gameState.useTimer;
+            this.classList.toggle('active');
+            elements.timerInputWrapper.classList.toggle('show');
+        });
+
+        elements.team1.addEventListener('blur', function() {
+            if (this.value.trim()) gameState.teams[0] = this.value.trim();
+        });
+
+        elements.team2.addEventListener('blur', function() {
+            if (this.value.trim()) gameState.teams[1] = this.value.trim();
+        });
+
+        elements.btnStart.addEventListener('click', function() {
+            if (gameState.cards.length === 0) {
+                alert('Fehler: Keine Karten geladen');
+                return;
+            }
+            if (!elements.team1.value.trim() || !elements.team2.value.trim()) {
+                alert('Bitte geben Sie beiden Teams Namen ein');
+                return;
+            }
+
+            gameState.teams[0] = elements.team1.value.trim();
+            gameState.teams[1] = elements.team2.value.trim();
+            gameState.useTimer = elements.timerToggle.classList.contains('active');
+            gameState.timerSeconds = parseInt(elements.timerSeconds.value) || 60;
+
+            for (let team of [0, 1]) {
+                gameState.scores[team] = {};
+                gameState.roundData[team] = {};
+                for (let i = 0; i < gameState.cards.length; i++) {
+                    gameState.scores[team][i] = 0;
+                }
+            }
+
+            gameState.usedCardIndices = new Set();
+            gameState.round = 1;
+            gameState.currentTeam = 0;
+
+            initializeRound();
+            showView('viewRS');
+        });
+
+        function initializeRound() {
+            gameState.roundCardIndices = [];
+            for (let i = 0; i < gameState.cards.length; i++) {
+                if (!gameState.usedCardIndices.has(i)) {
+                    gameState.roundCardIndices.push(i);
+                }
+            }
+
+            if (gameState.roundCardIndices.length === 0) {
+                endGame();
+                return;
+            }
+
+            gameState.roundCardIndices.sort(() => Math.random() - 0.5);
+            gameState.currentCardIndex = 0;
+            gameState.roundStartIndex = 0;
+
+            elements.rsTeamName.textContent = gameState.teams[gameState.currentTeam];
+            elements.rsRoundInfo.textContent = `Runde ${gameState.round}`;
+        }
+
+        elements.btnStartRound.addEventListener('click', function() {
+            showView('viewKA');
+            displayCard();
+            updateCardCounter();
+
+            if (gameState.useTimer) {
+                gameState.timeRemaining = gameState.timerSeconds;
+                startTimer();
+            }
+        });
+
+        function startTimer() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+
+            const timerDisplay = document.getElementById('cardTimerDisplay');
+            timerDisplay.style.display = 'block';
+
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeRemaining--;
+                timerDisplay.textContent = gameState.timeRemaining + 's';
+
+                if (gameState.timeRemaining <= 0) {
+                    clearInterval(gameState.timerInterval);
+                    timerDisplay.style.display = 'none';
+                    endRound();
+                }
+            }, 1000);
+        }
+
+        function displayCard() {
+            const cardIndex = gameState.roundCardIndices[gameState.currentCardIndex];
+            const card = gameState.cards[cardIndex];
+
+            const cardEl = document.getElementById('card');
+            cardEl.classList.remove('slide-out-left');
+            void cardEl.offsetWidth;
+
+            elements.cardWord.textContent = card.word;
+            elements.forbiddenList.innerHTML = card.forbidden.map(f => `<div>${f}</div>`).join('');
+        }
+
+        function updateCardCounter() {
+            const total = gameState.roundCardIndices.length;
+            elements.kaCounter.textContent = `${gameState.currentCardIndex + 1} / ${total}`;
+            elements.kaTeamName.textContent = gameState.teams[gameState.currentTeam];
+        }
+
+        elements.btnNext.addEventListener('click', () => {
+            if (gameState.currentCardIndex < gameState.roundCardIndices.length - 1) {
+                gameState.currentCardIndex++;
+                displayCard();
+                updateCardCounter();
+            }
+        });
+
+        elements.btnPrev.addEventListener('click', () => {
+            if (gameState.currentCardIndex > gameState.roundStartIndex) {
+                gameState.currentCardIndex--;
+                displayCard();
+                updateCardCounter();
+            }
+        });
+
+        let touchStartX = 0;
+        elements.cardContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+
+        elements.cardContainer.addEventListener('touchend', (e) => {
+            const deltaX = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(deltaX) > 50) {
+                deltaX > 0 ? elements.btnPrev.click() : elements.btnNext.click();
+            }
+        });
+
+        elements.btnEndRound.addEventListener('click', endRound);
+
+        function endRound() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            document.getElementById('cardTimerDisplay').style.display = 'none';
+
+            const cardsInRound = gameState.currentCardIndex - gameState.roundStartIndex + 1;
+            gameState.roundData[gameState.currentTeam][gameState.round] = cardsInRound;
+
+            for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
+                gameState.usedCardIndices.add(gameState.roundCardIndices[i]);
+            }
+
+            showRoundAuswertung();
+            showView('viewRA');
+        }
+
+        function showRoundAuswertung() {
+            elements.raTeamName.textContent = gameState.teams[gameState.currentTeam];
+            elements.raRoundInfo.textContent = `Runde ${gameState.round}`;
+
+            let totalScore = 0;
+            for (let idx in gameState.scores[gameState.currentTeam]) {
+                totalScore += gameState.scores[gameState.currentTeam][idx];
+            }
+            document.getElementById('raScore').textContent = `Gesamtpunkte: ${totalScore}`;
+
+            elements.wordList.innerHTML = '';
+            for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
+                const cardIndex = gameState.roundCardIndices[i];
+                const card = gameState.cards[cardIndex];
+                const wordItem = document.createElement('div');
+                wordItem.className = 'word-item';
+                wordItem.textContent = card.word;
+                wordItem.dataset.cardIndex = cardIndex;
+                wordItem.addEventListener('click', function() {
+                    this.classList.toggle('selected');
+                    gameState.scores[gameState.currentTeam][cardIndex] = this.classList.contains('selected') ? 1 : 0;
+
+                    let newTotal = 0;
+                    for (let idx in gameState.scores[gameState.currentTeam]) {
+                        newTotal += gameState.scores[gameState.currentTeam][idx];
+                    }
+                    document.getElementById('raScore').textContent = `Gesamtpunkte: ${newTotal}`;
+                });
+                elements.wordList.appendChild(wordItem);
+            }
+        }
+
+        elements.btnNextRound.addEventListener('click', function() {
+            if (gameState.roundCardIndices.length === 0 || (gameState.currentCardIndex === gameState.roundCardIndices.length - 1 && gameState.usedCardIndices.size === gameState.cards.length)) {
+                endGame();
+                return;
+            }
+
+            gameState.currentTeam = gameState.currentTeam === 0 ? 1 : 0;
+            gameState.round++;
+            initializeRound();
+            showView('viewRS');
+        });
+
+        elements.btnGameEnd.addEventListener('click', () => {
+            elements.confirmGameEnd.classList.add('show');
+        });
+
+        elements.btnCancelEnd.addEventListener('click', () => {
+            elements.confirmGameEnd.classList.remove('show');
+        });
+
+        elements.btnConfirmEnd.addEventListener('click', () => {
+            elements.confirmGameEnd.classList.remove('show');
+            endGame();
+        });
+
+        function endGame() {
+            showFinalResults();
+            showView('viewSA');
+        }
+
+        function showFinalResults() {
+            const team0Total = Object.values(gameState.scores[0]).reduce((a, b) => a + b, 0);
+            const team1Total = Object.values(gameState.scores[1]).reduce((a, b) => a + b, 0);
+
+            let tableHTML = `
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Runde</th>
+                            <th>${gameState.teams[0]}</th>
+                            <th>${gameState.teams[1]}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            for (let r = 1; r < gameState.round; r++) {
+                const team0Cards = gameState.roundData[0][r] || 0;
+                const team1Cards = gameState.roundData[1][r] || 0;
+                let team0Score = 0, team1Score = 0;
+
+                // Simplified: distribute points proportionally
+                const allRoundScores = Object.values(gameState.scores[0]).concat(Object.values(gameState.scores[1]));
+                if (allRoundScores.length > 0) {
+                    team0Score = Math.floor(team0Total / gameState.round);
+                    team1Score = Math.floor(team1Total / gameState.round);
+                }
+
+                tableHTML += `
+                    <tr>
+                        <td>Runde ${r}</td>
+                        <td class="team-score">${team0Score}/${team0Cards}</td>
+                        <td class="team-score">${team1Score}/${team1Cards}</td>
+                    </tr>
+                `;
+            }
+
+            tableHTML += `
+                    <tr class="round-total">
+                        <td>GESAMT</td>
+                        <td>${team0Total}/${gameState.roundCardIndices.length}</td>
+                        <td>${team1Total}/${gameState.roundCardIndices.length}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            `;
+
+            elements.resultsContainer.innerHTML = tableHTML;
+
+            let winner = team0Total > team1Total ? gameState.teams[0] : team1Total > team0Total ? gameState.teams[1] : 'Unentschieden!';
+            elements.resultsContainer.innerHTML += `<div class="winner-announcement">🏆 ${winner} hat gewonnen! 🏆</div>`;
+        }
+
+        elements.btnNewGame.addEventListener('click', () => {
+            if (gameState.usedCardIndices.size >= gameState.cards.length) {
+                elements.btnContinueRemaining.disabled = true;
+                elements.btnContinueRemaining.style.opacity = '0.5';
+            } else {
+                elements.btnContinueRemaining.disabled = false;
+                elements.btnContinueRemaining.style.opacity = '1';
+            }
+            elements.continueGameModal.classList.add('show');
+        });
+
+        elements.btnContinueRemaining.addEventListener('click', () => {
+            if (this.disabled) return;
+            elements.continueGameModal.classList.remove('show');
+            gameState.round = 1;
+            gameState.currentTeam = 0;
+            gameState.roundData = { 0: {}, 1: {} };
+            for (let team of [0, 1]) {
+                gameState.scores[team] = {};
+                for (let i = 0; i < gameState.cards.length; i++) {
+                    gameState.scores[team][i] = 0;
+                }
+            }
+            initializeRound();
+            showView('viewRS');
+        });
+
+        elements.btnContinueNew.addEventListener('click', () => {
+            elements.continueGameModal.classList.remove('show');
+            gameState.usedCardIndices = new Set();
+            gameState.round = 1;
+            gameState.currentTeam = 0;
+            gameState.roundData = { 0: {}, 1: {} };
+            for (let team of [0, 1]) {
+                gameState.scores[team] = {};
+                for (let i = 0; i < gameState.cards.length; i++) {
+                    gameState.scores[team][i] = 0;
+                }
+            }
+            initializeRound();
+            showView('viewRS');
+        });
+
+        elements.btnHome.addEventListener('click', () => {
+            libraryCards = [];
+            uploadedFilesLibrary = [];
+            gameState.cards = [];
+            loadLibrary();
+            showView('viewLibrary');
+        });
+
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        // Initialize
+        loadLibrary();
+    </script>
+</body>
+</html>
