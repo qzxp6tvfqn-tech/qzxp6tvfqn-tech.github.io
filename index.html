@@ -179,6 +179,7 @@
             flex-direction: column;
             justify-content: center;
             gap: 30px;
+            width: 100%;
         }
 
         .game-title {
@@ -1025,11 +1026,11 @@
             timerInterval: null,
             timeRemaining: 0,
             scores: { 0: {}, 1: {} },
-            roundData: { 0: {}, 1: {} }, // { teamId: { roundNumber: { correct: X, processed: Y } } }
+            roundData: { 0: {}, 1: {} },
             usedCardIndices: new Set(),
             roundCardIndices: [],
             roundStartIndex: 0,
-            excludedIndices: new Set() // Dauerhaft ausgeschlossene Duplikate
+            excludedIndices: new Set()
         };
 
         // ===== VORDEFINIERTE LISTEN (FALLBACK) =====
@@ -1059,7 +1060,7 @@
             }
         ];
         let uploadedFilesLibrary = [];
-        let allCardsBeforeDeduplicate = 0; // Tracking für Statistik
+        let allCardsBeforeDeduplicate = 0;
 
         // DOM Elements
         const elements = {
@@ -1118,7 +1119,6 @@
                 console.log('GitHub-Dateien nicht verfügbar, verwende vordefinierte Listen');
             }
             
-            // Lade CSV-Inhalte für GitHub-Dateien
             for (const lib of libraryCards) {
                 if (lib.csvUrl && lib.cards.length === 0) {
                     try {
@@ -1147,7 +1147,7 @@
                 if (!response.ok) throw new Error('GitHub API Fehler');
                 
                 const files = await response.json();
-                libraryCards = []; // Leere vordefinierte Listen
+                libraryCards = [];
                 
                 for (const file of files) {
                     if (file.name.endsWith('.csv')) {
@@ -1201,14 +1201,12 @@
             let totalCards = 0;
             let allCards = [];
             
-            // Sammle alle Karten von ausgewählten Listen
             document.querySelectorAll('.library-item.selected').forEach(item => {
                 const idx = parseInt(item.dataset.index);
                 allCards.push(...libraryCards[idx].cards);
                 totalCards += libraryCards[idx].cards.length;
             });
             
-            // Füge hochgeladene Dateien hinzu
             uploadedFilesLibrary.forEach(file => {
                 allCards.push(...file.cards);
                 totalCards += file.cards.length;
@@ -1216,7 +1214,6 @@
 
             allCardsBeforeDeduplicate = totalCards;
             
-            // Dedupliziere für Anzeige
             const deduped = deduplicateCardsForDisplay(allCards);
             
             elements.deduplicatedWords.textContent = deduped.length;
@@ -1236,7 +1233,6 @@
             return deduped;
         }
 
-        // Library CSV Upload
         elements.csvFileLibrary.addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
@@ -1314,7 +1310,6 @@
                 }
             }
             
-            // Merke ausgeschlossene Indizes dauerhaft
             dupedIndices.forEach(idx => gameState.excludedIndices.add(idx));
             
             return deduped;
@@ -1345,7 +1340,6 @@
             showView('viewStart');
         });
 
-        // Timer Toggle
         elements.timerToggle.addEventListener('click', function() {
             gameState.useTimer = !gameState.useTimer;
             this.classList.toggle('active');
@@ -1495,7 +1489,7 @@
 
             const cardsProcessed = gameState.currentCardIndex - gameState.roundStartIndex + 1;
             
-            // Zähle richtige Karten für dieses Team in dieser Runde
+            // Zähle richtige Karten INITIAL (wird später überschrieben)
             let correctCount = 0;
             for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
                 const cardIndex = gameState.roundCardIndices[i];
@@ -1504,7 +1498,7 @@
                 }
             }
 
-            // Speichere Rundendaten - WICHTIG: Stelle sicher, dass correct und processed korrekt gespeichert werden
+            // Speichere Rundendaten
             if (!gameState.roundData[gameState.currentTeam][gameState.round]) {
                 gameState.roundData[gameState.currentTeam][gameState.round] = {};
             }
@@ -1513,7 +1507,7 @@
                 processed: cardsProcessed
             };
 
-            console.log(`Team ${gameState.currentTeam}, Runde ${gameState.round}: ${correctCount} richtig, ${cardsProcessed} bearbeitet`);
+            console.log(`INITIAL: Team ${gameState.currentTeam}, Runde ${gameState.round}: ${correctCount} richtig, ${cardsProcessed} bearbeitet`);
 
             // Markiere Karten als verwendet
             for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
@@ -1562,13 +1556,32 @@
         }
 
         elements.btnNextRound.addEventListener('click', function() {
+            // WICHTIG: Zähle die richtig erratenen Karten JETZT (nach Auswahl auf RA-Seite)
+            let correctCount = 0;
+            for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
+                const cardIndex = gameState.roundCardIndices[i];
+                if (gameState.scores[gameState.currentTeam][cardIndex] === 1) {
+                    correctCount++;
+                }
+            }
+            
+            const cardsProcessed = gameState.currentCardIndex - gameState.roundStartIndex + 1;
+            
+            // ÜBERSCHREIBE die Rundendaten mit den AKTUELLEN Werten nach Auswahl
+            gameState.roundData[gameState.currentTeam][gameState.round] = {
+                correct: correctCount,
+                processed: cardsProcessed
+            };
+            
+            console.log(`UPDATED: Team ${gameState.currentTeam}, Runde ${gameState.round}: ${correctCount} richtig, ${cardsProcessed} bearbeitet`);
+            
             // Prüfe ob noch Karten verfügbar sind
             if (gameState.roundCardIndices.length === 0 || (gameState.currentCardIndex === gameState.roundCardIndices.length - 1 && gameState.usedCardIndices.size === gameState.cards.length)) {
                 endGame();
                 return;
             }
 
-            // Wechsel zum anderen Team, Rundenzähler erhöht sich nur wenn Team 0 wieder an der Reihe ist
+            // Wechsel zum anderen Team
             if (gameState.currentTeam === 0) {
                 gameState.currentTeam = 1;
             } else {
@@ -1654,14 +1667,11 @@
         }
 
         elements.btnNewGame.addEventListener('click', () => {
-            // Prüfe ob noch Karten verfügbar sind
             const remainingCards = gameState.cards.length - gameState.usedCardIndices.size;
             
             if (remainingCards <= 0) {
-                // Keine Karten mehr, kann nur mit allen Karten neu starten
                 startNewGame(true);
             } else {
-                // Es gibt noch Karten, zeige Modal
                 elements.btnContinueRemaining.disabled = false;
                 elements.btnContinueRemaining.style.opacity = '1';
                 elements.continueGameModal.classList.add('show');
@@ -1675,10 +1685,8 @@
             gameState.roundData = { 0: {}, 1: {} };
             
             if (resetAll) {
-                // Mit allen Karten neu starten - aber Duplikate bleiben ausgeschlossen
                 gameState.usedCardIndices = new Set();
             }
-            // Mit verbleibenden Karten - usedCardIndices bleibt wie ist
             
             for (let team of [0, 1]) {
                 gameState.scores[team] = {};
