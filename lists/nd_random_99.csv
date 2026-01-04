@@ -1,0 +1,8 @@
+3D-Drucker;Drucker;Maschine;Gerät;Hardware
+Filament;Kunststoff;Spule;Material;PLA
+Slicer;Software;Schichten;G-Code;Vorbereiten
+Druckbett;Oberfläche;Haftung;Leveling;Platte
+Nozzle;Düse;Öffnung;verstopft;Durchmesser
+Layer;Schicht;Höhe;Auflösung;Schichtung
+Infill;Füllung;Prozent;Dichte;Waben
+Stützstrukturen;Support;Überhang;entfernen;abbrechen
