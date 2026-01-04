@@ -1125,6 +1125,7 @@
                         const csvResp = await fetch(lib.csvUrl);
                         const csvText = await csvResp.text();
                         lib.cards = parseLibraryCSV(csvText);
+                        lib.cardCount = lib.cards.length;
                     } catch (error) {
                         console.warn(`Fehler beim Laden von ${lib.fileName}:`, error);
                     }
@@ -1503,7 +1504,7 @@
                 }
             }
 
-            // Speichere Rundendaten
+            // Speichere Rundendaten - WICHTIG: Stelle sicher, dass correct und processed korrekt gespeichert werden
             if (!gameState.roundData[gameState.currentTeam][gameState.round]) {
                 gameState.roundData[gameState.currentTeam][gameState.round] = {};
             }
@@ -1511,6 +1512,8 @@
                 correct: correctCount,
                 processed: cardsProcessed
             };
+
+            console.log(`Team ${gameState.currentTeam}, Runde ${gameState.round}: ${correctCount} richtig, ${cardsProcessed} bearbeitet`);
 
             // Markiere Karten als verwendet
             for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
@@ -1596,9 +1599,6 @@
         }
 
         function showFinalResults() {
-            const team0Total = Object.values(gameState.scores[0]).reduce((a, b) => a + b, 0);
-            const team1Total = Object.values(gameState.scores[1]).reduce((a, b) => a + b, 0);
-
             let tableHTML = `
                 <table class="results-table">
                     <thead>
@@ -1611,15 +1611,19 @@
                     <tbody>
             `;
 
-            let totalTeam0 = 0;
-            let totalTeam1 = 0;
+            let totalTeam0Correct = 0;
+            let totalTeam0Processed = 0;
+            let totalTeam1Correct = 0;
+            let totalTeam1Processed = 0;
 
             for (let r = 1; r <= gameState.round; r++) {
                 const team0Data = gameState.roundData[0][r] || { correct: 0, processed: 0 };
                 const team1Data = gameState.roundData[1][r] || { correct: 0, processed: 0 };
                 
-                totalTeam0 += team0Data.correct;
-                totalTeam1 += team1Data.correct;
+                totalTeam0Correct += team0Data.correct;
+                totalTeam0Processed += team0Data.processed;
+                totalTeam1Correct += team1Data.correct;
+                totalTeam1Processed += team1Data.processed;
 
                 const team0Score = `${team0Data.correct}/${team0Data.processed}`;
                 const team1Score = `${team1Data.correct}/${team1Data.processed}`;
@@ -1636,8 +1640,8 @@
             tableHTML += `
                     <tr class="round-total">
                         <td>GESAMT</td>
-                        <td>${totalTeam0}</td>
-                        <td>${totalTeam1}</td>
+                        <td>${totalTeam0Correct}/${totalTeam0Processed}</td>
+                        <td>${totalTeam1Correct}/${totalTeam1Processed}</td>
                     </tr>
                     </tbody>
                 </table>
@@ -1645,7 +1649,7 @@
 
             elements.resultsContainer.innerHTML = tableHTML;
 
-            let winner = totalTeam0 > totalTeam1 ? gameState.teams[0] : totalTeam1 > totalTeam0 ? gameState.teams[1] : 'Unentschieden!';
+            let winner = totalTeam0Correct > totalTeam1Correct ? gameState.teams[0] : totalTeam1Correct > totalTeam0Correct ? gameState.teams[1] : 'Unentschieden!';
             elements.resultsContainer.innerHTML += `<div class="winner-announcement">🏆 ${winner} hat gewonnen! 🏆</div>`;
         }
 
