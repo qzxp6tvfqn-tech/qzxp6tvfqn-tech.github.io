@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabu Individual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #FF6B6B;
+            --primary-dark: #E63946;
+            --primary-light: #FF8E8E;
+            --secondary: #1D3557;
+            --accent: #F1FAEE;
+            --success: #2A9D8F;
+            --warning: #E8B44A;
+            --text: #1D3557;
+            --border: #DDD;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--secondary) 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            height: 100vh;
+            max-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--accent);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .view {
+            display: none;
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .view.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ========== STARTSEITE ========== */
+        .view-start {
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+        }
+
+        .start-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .game-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--primary);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .game-subtitle {
+            font-size: 18px;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin: 15px 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--secondary);
+            font-size: 14px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-dark);
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin: 15px 0;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .file-input-label:active {
+            transform: scale(0.98);
+        }
+
+        .file-name {
+            font-size: 12px;
+            color: var(--success);
+            margin-top: 5px;
+        }
+
+        .timer-settings {
+            background: #F0F0F0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .timer-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .toggle-switch {
+            width: 50px;
+            height: 28px;
+            background: #CCC;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--success);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: left 0.3s ease;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            left: 24px;
+        }
+
+        .timer-input-wrapper {
+            display: none;
+        }
+
+        .timer-input-wrapper.show {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .timer-input-wrapper input {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid var(--primary);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 10px 16px;
+            font-size: 14px;
+        }
+
+        /* ========== RUNDENSTART (RS) ========== */
+        .view-rs {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .rs-content {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            width: 100%;
+        }
+
+        .team-indicator {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--primary);
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(229, 57, 70, 0.1));
+            border-radius: 12px;
+            border: 3px solid var(--primary);
+        }
+
+        .round-info {
+            font-size: 18px;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .timer-display {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            padding: 20px;
+            background: #FFF3F3;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .timer-display.show {
+            display: block;
+        }
+
+        /* ========== KARTENANSICHT (KA) ========== */
+        .view-ka {
+            justify-content: space-between;
+        }
+
+        .ka-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .ka-team-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .ka-counter {
+            font-size: 14px;
+            color: var(--secondary);
+            background: #F0F0F0;
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .card-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 20px 0;
+            touch-action: pan-y;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1 / 1.2;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            color: white;
+            text-align: center;
+            position: relative;
+            user-select: none;
+            cursor: grab;
+            transition: transform 0.1s ease;
+        }
+
+        .card:active {
+            cursor: grabbing;
+        }
+
+        .card-word {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 30px;
+            word-wrap: break-word;
+        }
+
+        .card-forbidden {
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .card-forbidden-title {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .ka-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-next {
+            flex: 1;
+        }
+
+        .btn-end {
+            flex: 1;
+        }
+
+        .swipe-hint {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        /* ========== RUNDENAUSWERTUNG (RA) ========== */
+        .view-ra {
+            justify-content: flex-start;
+        }
+
+        .ra-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .ra-team {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .ra-round {
+            font-size: 14px;
+            color: var(--secondary);
+            margin-top: 5px;
+        }
+
+        .word-list {
+            flex: 1;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .word-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .word-item.selected {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        .ra-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-next-round {
+            flex: 1;
+        }
+
+        .btn-end-game {
+            background: var(--warning);
+            color: white;
+        }
+
+        /* ========== SPIELAUSWERTUNG (SA) ========== */
+        .view-sa {
+            justify-content: space-between;
+        }
+
+        .sa-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .sa-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .results-container {
+            flex: 1;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .result-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-team {
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        .result-score {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .final-score {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .final-score-label {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .final-score-value {
+            font-size: 40px;
+            font-weight: 800;
+            margin-top: 10px;
+        }
+
+        .sa-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn-new-game {
+            flex: 1;
+        }
+
+        .btn-home {
+            flex: 1;
+            background: var(--secondary);
+            color: white;
+        }
+
+        /* ========== MODAL ========== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--accent);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 15px;
+        }
+
+        .modal-text {
+            color: var(--text);
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-buttons .btn {
+            flex: 1;
+        }
+
+        .continue-game-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .continue-game-options .btn {
+            width: 100%;
+        }
+
+        /* ========== ERROR MESSAGE ========== */
+        .error-message {
+            background: #FFE0E0;
+            color: var(--primary-dark);
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 480px) {
+            .game-title {
+                font-size: 36px;
+            }
+
+            .card-word {
+                font-size: 36px;
+            }
+
+            .card {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- STARTSEITE -->
+        <div class="view view-start active" id="viewStart">
+            <div class="start-content">
+                <div>
+                    <h1 class="game-title">Tabu</h1>
+                    <p class="game-subtitle">Individual</p>
+                </div>
+
+                <div>
+                    <div class="form-group">
+                        <label for="team1">Team 1 Name</label>
+                        <input type="text" id="team1" placeholder="z.B. Team A" value="">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="team2">Team 2 Name</label>
+                        <input type="text" id="team2" placeholder="z.B. Team B" value="">
+                    </div>
+
+                    <div class="file-input-wrapper">
+                        <label for="csvFile" class="file-input-label">CSV Datei auswählen</label>
+                        <input type="file" id="csvFile" accept=".csv" />
+                        <div class="file-name" id="fileName"></div>
+                    </div>
+
+                    <div class="error-message" id="errorStart"></div>
+
+                    <div class="timer-settings">
+                        <div class="timer-toggle">
+                            <span>Timer aktivieren:</span>
+                            <div class="toggle-switch" id="timerToggle">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="timer-input-wrapper" id="timerInputWrapper">
+                            <input type="number" id="timerSeconds" min="10" max="300" value="60" />
+                            <span>Sekunden</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="btnStart">Spiel Starten</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RUNDENSTART (RS) -->
+        <div class="view view-rs" id="viewRS">
+            <div class="rs-content">
+                <div class="team-indicator" id="rsTeamName">Team 1</div>
+                <div class="round-info" id="rsRoundInfo">Runde 1</div>
+                <div class="timer-display" id="timerDisplayRS">60 Sekunden</div>
+                <button class="btn btn-primary btn-large" id="btnStartRound">Runde Starten</button>
+            </div>
+        </div>
+
+        <!-- KARTENANSICHT (KA) -->
+        <div class="view view-ka" id="viewKA">
+            <div class="ka-header">
+                <div class="ka-team-name" id="kaTeamName">Team 1</div>
+                <div class="ka-counter" id="kaCounter">1 / 30</div>
+            </div>
+
+            <div class="card-container" id="cardContainer">
+                <div class="card" id="card">
+                    <div class="card-word" id="cardWord">Wort</div>
+                    <div class="card-forbidden" id="cardForbidden">
+                        <div class="card-forbidden-title">VERBOTEN:</div>
+                        <div id="forbiddenList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="swipe-hint">← Wischen zum Blättern →</div>
+
+            <div class="ka-controls">
+                <button class="btn btn-secondary btn-next" id="btnPrev">← Zurück</button>
+                <button class="btn btn-primary btn-next" id="btnNext">Weiter →</button>
+                <button class="btn btn-end" id="btnEndRound">Runde Beenden</button>
+            </div>
+        </div>
+
+        <!-- RUNDENAUSWERTUNG (RA) -->
+        <div class="view view-ra" id="viewRA">
+            <div class="ra-header">
+                <div class="ra-team" id="raTeamName">Team 1</div>
+                <div class="ra-round" id="raRoundInfo">Runde 1</div>
+            </div>
+
+            <div class="word-list" id="wordList"></div>
+
+            <div class="ra-actions">
+                <button class="btn btn-primary btn-next-round" id="btnNextRound">Nächste Runde Starten</button>
+                <button class="btn btn-end-game" id="btnGameEnd">Spiel Beenden</button>
+            </div>
+        </div>
+
+        <!-- SPIELAUSWERTUNG (SA) -->
+        <div class="view view-sa" id="viewSA">
+            <div class="sa-header">
+                <h2 class="sa-title">Spielergebnis</h2>
+            </div>
+
+            <div class="results-container" id="resultsContainer"></div>
+
+            <div class="final-score">
+                <div class="final-score-label">Gesamtpunkte</div>
+                <div class="final-score-value" id="finalScore">0</div>
+            </div>
+
+            <div class="sa-actions">
+                <button class="btn btn-primary btn-new-game" id="btnNewGame">Neues Spiel</button>
+                <button class="btn btn-home" id="btnHome">Zurück zur Startseite</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <div class="modal" id="confirmGameEnd">
+        <div class="modal-content">
+            <div class="modal-title">Spiel beenden?</div>
+            <div class="modal-text">Bist du sicher, dass du das Spiel beenden möchtest?</div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="btnCancelEnd">Abbrechen</button>
+                <button class="btn btn-primary" id="btnConfirmEnd">Beenden</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="continueGameModal">
+        <div class="modal-content">
+            <div class="modal-title">Weiterspielen?</div>
+            <div class="modal-text">Möchtest du mit den verbleibenden Karten weiterspielen oder mit allen Karten neu beginnen?</div>
+            <div class="continue-game-options">
+                <button class="btn btn-primary" id="btnContinueRemaining">Mit verbleibenden Karten</button>
+                <button class="btn btn-secondary" id="btnContinueNew">Mit allen Karten neu starten</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        const gameState = {
+            cards: [],
+            currentRoundCards: [],
+            currentCardIndex: 0,
+            teams: ['Team 1', 'Team 2'],
+            currentTeam: 0,
+            round: 1,
+            useTimer: false,
+            timerSeconds: 60,
+            timerInterval: null,
+            timeRemaining: 0,
+            scores: { 0: {}, 1: {} },
+            roundScores: {},
+            usedCardIndices: new Set(),
+            roundCardIndices: [],
+            swipeStartX: 0,
+            swipeStartY: 0,
+            roundStartIndex: 0
+        };
+
+        // DOM Elements
+        const elements = {
+            viewStart: document.getElementById('viewStart'),
+            viewRS: document.getElementById('viewRS'),
+            viewKA: document.getElementById('viewKA'),
+            viewRA: document.getElementById('viewRA'),
+            viewSA: document.getElementById('viewSA'),
+            team1: document.getElementById('team1'),
+            team2: document.getElementById('team2'),
+            csvFile: document.getElementById('csvFile'),
+            fileName: document.getElementById('fileName'),
+            btnStart: document.getElementById('btnStart'),
+            timerToggle: document.getElementById('timerToggle'),
+            timerInputWrapper: document.getElementById('timerInputWrapper'),
+            timerSeconds: document.getElementById('timerSeconds'),
+            btnStartRound: document.getElementById('btnStartRound'),
+            rsTeamName: document.getElementById('rsTeamName'),
+            rsRoundInfo: document.getElementById('rsRoundInfo'),
+            timerDisplayRS: document.getElementById('timerDisplayRS'),
+            kaTeamName: document.getElementById('kaTeamName'),
+            kaCounter: document.getElementById('kaCounter'),
+            cardContainer: document.getElementById('cardContainer'),
+            cardWord: document.getElementById('cardWord'),
+            forbiddenList: document.getElementById('forbiddenList'),
+            btnNext: document.getElementById('btnNext'),
+            btnPrev: document.getElementById('btnPrev'),
+            btnEndRound: document.getElementById('btnEndRound'),
+            raTeamName: document.getElementById('raTeamName'),
+            raRoundInfo: document.getElementById('raRoundInfo'),
+            wordList: document.getElementById('wordList'),
+            btnNextRound: document.getElementById('btnNextRound'),
+            btnGameEnd: document.getElementById('btnGameEnd'),
+            resultsContainer: document.getElementById('resultsContainer'),
+            finalScore: document.getElementById('finalScore'),
+            btnNewGame: document.getElementById('btnNewGame'),
+            btnHome: document.getElementById('btnHome'),
+            confirmGameEnd: document.getElementById('confirmGameEnd'),
+            btnCancelEnd: document.getElementById('btnCancelEnd'),
+            btnConfirmEnd: document.getElementById('btnConfirmEnd'),
+            continueGameModal: document.getElementById('continueGameModal'),
+            btnContinueRemaining: document.getElementById('btnContinueRemaining'),
+            btnContinueNew: document.getElementById('btnContinueNew'),
+            errorStart: document.getElementById('errorStart')
+        };
+
+        // CSV Upload
+        elements.csvFile.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        parseCSV(event.target.result);
+                        elements.fileName.textContent = `✓ ${file.name} hochgeladen`;
+                        elements.fileName.style.color = 'var(--success)';
+                        elements.errorStart.classList.remove('show');
+                    } catch (error) {
+                        showError('CSV-Format ungültig. Erwartet: hauptwort;verbot1;verbot2;verbot3;verbot4');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function parseCSV(csv) {
+            gameState.cards = [];
+            const lines = csv.trim().split('\n');
+            for (let line of lines) {
+                if (line.trim() === '') continue;
+                const parts = line.split(';').map(p => p.trim());
+                if (parts.length !== 5) {
+                    throw new Error('Ungültige Spaltenanzahl');
+                }
+                gameState.cards.push({
+                    word: parts[0],
+                    forbidden: [parts[1], parts[2], parts[3], parts[4]]
+                });
+            }
+            if (gameState.cards.length === 0) {
+                throw new Error('Keine Karten gefunden');
+            }
+        }
+
+        // Timer Toggle
+        elements.timerToggle.addEventListener('click', function() {
+            gameState.useTimer = !gameState.useTimer;
+            this.classList.toggle('active');
+            elements.timerInputWrapper.classList.toggle('show');
+        });
+
+        // Teamnamen behalten
+        elements.team1.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                gameState.teams[0] = this.value.trim();
+            }
+        });
+
+        elements.team2.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                gameState.teams[1] = this.value.trim();
+            }
+        });
+
+        function showError(message) {
+            elements.errorStart.textContent = message;
+            elements.errorStart.classList.add('show');
+        }
+
+        // Game Start
+        elements.btnStart.addEventListener('click', function() {
+            if (gameState.cards.length === 0) {
+                showError('Bitte lade eine CSV Datei hoch.');
+                return;
+            }
+            if (!elements.team1.value.trim() || !elements.team2.value.trim()) {
+                showError('Bitte gib beiden Teams Namen ein.');
+                return;
+            }
+
+            gameState.teams[0] = elements.team1.value.trim();
+            gameState.teams[1] = elements.team2.value.trim();
+            gameState.useTimer = elements.timerToggle.classList.contains('active');
+            gameState.timerSeconds = parseInt(elements.timerSeconds.value) || 60;
+
+            // Initialize scores
+            for (let team of [0, 1]) {
+                gameState.scores[team] = {};
+                for (let i = 0; i < gameState.cards.length; i++) {
+                    gameState.scores[team][i] = 0;
+                }
+            }
+
+            gameState.usedCardIndices = new Set();
+            gameState.round = 1;
+            gameState.currentTeam = 0;
+            gameState.roundScores = {};
+
+            initializeRound();
+            showView('viewRS');
+        });
+
+        function initializeRound() {
+            gameState.roundCardIndices = [];
+            for (let i = 0; i < gameState.cards.length; i++) {
+                if (!gameState.usedCardIndices.has(i)) {
+                    gameState.roundCardIndices.push(i);
+                }
+            }
+
+            if (gameState.roundCardIndices.length === 0) {
+                endGame();
+                return;
+            }
+
+            // Shuffle cards for this round
+            gameState.roundCardIndices = gameState.roundCardIndices.sort(() => Math.random() - 0.5);
+            gameState.currentCardIndex = 0;
+            gameState.roundStartIndex = 0;
+
+            elements.rsTeamName.textContent = gameState.teams[gameState.currentTeam];
+            elements.rsRoundInfo.textContent = `Runde ${gameState.round}`;
+        }
+
+        elements.btnStartRound.addEventListener('click', function() {
+            showView('viewKA');
+            displayCard();
+            updateCardCounter();
+
+            if (gameState.useTimer) {
+                gameState.timeRemaining = gameState.timerSeconds;
+                elements.timerDisplayRS.classList.remove('show');
+                startTimer();
+            }
+        });
+
+        function startTimer() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeRemaining--;
+
+                if (gameState.timeRemaining <= 0) {
+                    clearInterval(gameState.timerInterval);
+                    endRound();
+                }
+            }, 1000);
+        }
+
+        function displayCard() {
+            const cardIndex = gameState.roundCardIndices[gameState.currentCardIndex];
+            const card = gameState.cards[cardIndex];
+            elements.cardWord.textContent = card.word;
+            elements.forbiddenList.innerHTML = card.forbidden.map(f => `<div>${f}</div>`).join('');
+        }
+
+        function updateCardCounter() {
+            const total = gameState.roundCardIndices.length;
+            elements.kaCounter.textContent = `${gameState.currentCardIndex + 1} / ${total}`;
+            elements.kaTeamName.textContent = gameState.teams[gameState.currentTeam];
+        }
+
+        // Card Navigation
+        elements.btnNext.addEventListener('click', nextCard);
+        elements.btnPrev.addEventListener('click', prevCard);
+
+        function nextCard() {
+            if (gameState.currentCardIndex < gameState.roundCardIndices.length - 1) {
+                gameState.currentCardIndex++;
+                displayCard();
+                updateCardCounter();
+            }
+        }
+
+        function prevCard() {
+            if (gameState.currentCardIndex > gameState.roundStartIndex) {
+                gameState.currentCardIndex--;
+                displayCard();
+                updateCardCounter();
+            }
+        }
+
+        // Swipe Detection
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        elements.cardContainer.addEventListener('touchstart', function(e) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+
+        elements.cardContainer.addEventListener('touchend', function(e) {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                if (deltaX > 0) {
+                    prevCard();
+                } else {
+                    nextCard();
+                }
+            }
+        });
+
+        elements.btnEndRound.addEventListener('click', endRound);
+
+        function endRound() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+
+            // Mark cards as used
+            for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
+                gameState.usedCardIndices.add(gameState.roundCardIndices[i]);
+            }
+
+            showRoundAuswertung();
+            showView('viewRA');
+        }
+
+        function showRoundAuswertung() {
+            elements.raTeamName.textContent = gameState.teams[gameState.currentTeam];
+            elements.raRoundInfo.textContent = `Runde ${gameState.round}`;
+
+            elements.wordList.innerHTML = '';
+            for (let i = gameState.roundStartIndex; i <= gameState.currentCardIndex; i++) {
+                const cardIndex = gameState.roundCardIndices[i];
+                const card = gameState.cards[cardIndex];
+                const wordItem = document.createElement('div');
+                wordItem.className = 'word-item';
+                wordItem.textContent = card.word;
+                wordItem.dataset.cardIndex = cardIndex;
+                wordItem.addEventListener('click', function() {
+                    this.classList.toggle('selected');
+                    gameState.scores[gameState.currentTeam][cardIndex] = this.classList.contains('selected') ? 1 : 0;
+                });
+                elements.wordList.appendChild(wordItem);
+            }
+        }
+
+        elements.btnNextRound.addEventListener('click', function() {
+            gameState.currentTeam = gameState.currentTeam === 0 ? 1 : 0;
+            gameState.round++;
+            initializeRound();
+            showView('viewRS');
+        });
+
+        elements.btnGameEnd.addEventListener('click', function() {
+            elements.confirmGameEnd.classList.add('show');
+        });
+
+        elements.btnCancelEnd.addEventListener('click', function() {
+            elements.confirmGameEnd.classList.remove('show');
+        });
+
+        elements.btnConfirmEnd.addEventListener('click', function() {
+            elements.confirmGameEnd.classList.remove('show');
+            endGame();
+        });
+
+        function endGame() {
+            calculateFinalScores();
+            showFinalResults();
+            showView('viewSA');
+        }
+
+        function calculateFinalScores() {
+            for (let team of [0, 1]) {
+                let totalScore = 0;
+                for (let cardIndex in gameState.scores[team]) {
+                    totalScore += gameState.scores[team][cardIndex];
+                }
+                gameState.roundScores[team] = totalScore;
+            }
+        }
+
+        function showFinalResults() {
+            elements.resultsContainer.innerHTML = '';
+            let totalScore = 0;
+
+            for (let team of [0, 1]) {
+                const score = gameState.roundScores[team] || 0;
+                totalScore += score;
+
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                resultItem.innerHTML = `
+                    <div class="result-team">${gameState.teams[team]}</div>
+                    <div class="result-score">${score} Punkte</div>
+                `;
+                elements.resultsContainer.appendChild(resultItem);
+            }
+
+            elements.finalScore.textContent = totalScore;
+        }
+
+        elements.btnNewGame.addEventListener('click', function() {
+            elements.continueGameModal.classList.add('show');
+        });
+
+        elements.btnContinueRemaining.addEventListener('click', function() {
+            elements.continueGameModal.classList.remove('show');
+            // Restart with remaining cards
+            gameState.round = 1;
+            gameState.currentTeam = 0;
+            gameState.roundScores = {};
+            initializeRound();
+            showView('viewRS');
+        });
+
+        elements.btnContinueNew.addEventListener('click', function() {
+            elements.continueGameModal.classList.remove('show');
+            // Reset all cards
+            gameState.usedCardIndices = new Set();
+            gameState.round = 1;
+            gameState.currentTeam = 0;
+            gameState.roundScores = {};
+            initializeRound();
+            showView('viewRS');
+        });
+
+        elements.btnHome.addEventListener('click', function() {
+            elements.viewStart.classList.add('active');
+            resetToHome();
+            showView('viewStart');
+        });
+
+        function resetToHome() {
+            gameState.cards = [];
+            gameState.usedCardIndices = new Set();
+            elements.csvFile.value = '';
+            elements.fileName.textContent = '';
+        }
+
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
